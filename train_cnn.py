@@ -3,13 +3,13 @@ import shutil
 import torch
 import torch.nn as nn
 import pandas as pd
-
+from sklearn.metrics import accuracy_score
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from torchvision.transforms import Compose, Resize, ToTensor, Normalize
 from sklearn.model_selection import train_test_split
-
+from tqdm import tqdm
 from dataset import DogBreedTrainValDataset
 from model import DogBreedResNet
 
@@ -96,3 +96,60 @@ if __name__ == "__main__":
         best_acc = ckpt.get("best_acc", 0)
 
     num_iters = len(train_dataloader)
+    for epoch in range(start_epoch, num_epochs):
+        model.train()
+        progress_bar = tqdm(train_dataloader, colour="green")
+
+        for iteration, (images, labels) in enumerate(progress_bar):
+            images = images.to(device)
+            labels = labels.to(device)
+
+            outputs = model(images)
+            loss_value = criterion(outputs, labels)
+
+            optimizer.zero_grad()
+            loss_value.backward()
+            optimizer.step()
+
+            progress_bar.set_description(
+                f"Epoch {epoch+1}/{num_epochs}, Iteration {iteration+1}/{num_iters}, Loss {loss_value.item():.4f}"
+            )
+
+            writer.add_scalar("Train/Loss", loss_value.item(), epoch * num_iters + iteration)
+
+        model.eval()
+        all_labels = []
+        all_predictions = []
+
+        with torch.no_grad():
+            for images, labels in val_dataloader:
+                images = images.to(device)
+                labels = labels.to(device)
+
+                outputs = model(images)
+                predictions = torch.argmax(outputs, dim=1)
+
+                all_labels.extend(labels.cpu().numpy().tolist())
+                all_predictions.extend(predictions.cpu().numpy().tolist())
+
+        accuracy = accuracy_score(all_labels, all_predictions)
+        writer.add_scalar("Validation/Accuracy", accuracy, epoch)
+
+        checkpoint = {
+            "epoch": epoch + 1,
+            "model": model.state_dict(),
+            "optimizer": optimizer.state_dict(),
+            "best_acc": best_acc,
+            "class_to_idx": train_dataset.class_to_idx
+        }
+
+        torch.save(checkpoint, "training_models/last_resnet.pth")
+
+        if accuracy > best_acc:
+            best_acc = accuracy
+            checkpoint["best_acc"] = best_acc
+            torch.save(checkpoint, "training_models/best_resnet.pth")
+
+        print(f"Epoch {epoch+1}/{num_epochs} - Validation Accuracy: {accuracy:.4f}")
+        
+    writer.close()
