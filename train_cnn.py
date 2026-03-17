@@ -22,8 +22,8 @@ if __name__ == "__main__":
     batch_size = 32
     start_epoch = 0
     best_acc = 0
-    lr = 1e-4
-    weight_decay = 1e-4
+    patience = 5
+    freeze_epochs = 8
 
     labels_path = "labels.csv"
     train_dir = "train"
@@ -31,8 +31,8 @@ if __name__ == "__main__":
     train_transform = Compose([
         Resize((224, 224)),
         RandomHorizontalFlip(p=0.5),
-        RandomRotation(15),
-        ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+        RandomRotation(20),
+        ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3),
         ToTensor(),
         Normalize([0.485, 0.456, 0.406],
                   [0.229, 0.224, 0.225])
@@ -107,6 +107,12 @@ if __name__ == "__main__":
 
     for epoch in range(start_epoch, num_epochs):
         model.train()
+        
+        if epoch == freeze_epochs:
+            print("🔥 Unfreezing backbone!")
+            for param in model.backbone.parameters():
+                param.requires_grad = True
+
         progress_bar = tqdm(train_dataloader, colour="green")
 
         for iteration, (images, labels) in enumerate(progress_bar):
@@ -162,9 +168,15 @@ if __name__ == "__main__":
 
         if accuracy > best_acc:
             best_acc = accuracy
+            no_improve_epochs = 0
             checkpoint["best_acc"] = best_acc
             torch.save(checkpoint, "training_models/best_resnet.pth")
+        else:
+            no_improve_epochs += 1
 
+        if no_improve_epochs >= patience:
+            print(f"Early stopping at epoch {epoch+1} due to no improvement in validation accuracy for {patience} consecutive epochs.")
+            break    
         print(f"Epoch {epoch+1}/{num_epochs} - Validation Accuracy: {accuracy:.4f}")
         
     writer.close()
