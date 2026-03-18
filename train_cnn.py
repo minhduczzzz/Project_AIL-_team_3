@@ -28,7 +28,7 @@ if __name__ == "__main__":
     train_dir = "train"
 
     train_transform = Compose([
-    RandomResizedCrop(224, scale=(0.8, 1.0)),  # 👈 thay Resize
+    RandomResizedCrop(224, scale=(0.8, 1.0)),  # Resize
     RandomHorizontalFlip(),
     RandomRotation(15),
     ColorJitter(0.3, 0.3, 0.3),
@@ -39,8 +39,8 @@ if __name__ == "__main__":
     ])
 
     val_transform = Compose([
-    Resize(256),        # 👈 giữ tỉ lệ
-    CenterCrop(224),    # 👈 crop giữa
+    Resize(256),        #  giữ tỉ lệ
+    CenterCrop(224),    #  crop giữa
     ToTensor(),
     Normalize([0.485, 0.456, 0.406],
               [0.229, 0.224, 0.225])
