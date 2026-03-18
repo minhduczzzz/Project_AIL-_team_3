@@ -9,7 +9,7 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from torchvision.transforms import Compose, Resize, RandomHorizontalFlip, RandomRotation, ColorJitter, ToTensor, Normalize
+from torchvision.transforms import CenterCrop, Compose, RandomErasing, RandomResizedCrop, Resize, RandomHorizontalFlip, RandomRotation, ColorJitter, ToTensor, Normalize
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 from dataset import DogBreedTrainValDataset
@@ -28,20 +28,22 @@ if __name__ == "__main__":
     train_dir = "train"
 
     train_transform = Compose([
-        Resize((224, 224)),
-        RandomHorizontalFlip(p=0.5),
-        RandomRotation(20),
-        ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
-        ToTensor(),
-        Normalize([0.485, 0.456, 0.406],
-                  [0.229, 0.224, 0.225])
+    RandomResizedCrop(224, scale=(0.8, 1.0)),  # 👈 thay Resize
+    RandomHorizontalFlip(),
+    RandomRotation(15),
+    ColorJitter(0.3, 0.3, 0.3),
+    ToTensor(),
+    Normalize([0.485, 0.456, 0.406],
+              [0.229, 0.224, 0.225]),
+    RandomErasing(p=0.25)
     ])
 
     val_transform = Compose([
-        Resize((224, 224)),
-        ToTensor(),
-        Normalize(mean=[0.485, 0.456, 0.406],
-                  std=[0.229, 0.224, 0.225])
+    Resize(256),        # 👈 giữ tỉ lệ
+    CenterCrop(224),    # 👈 crop giữa
+    ToTensor(),
+    Normalize([0.485, 0.456, 0.406],
+              [0.229, 0.224, 0.225])
     ])
 
     df = pd.read_csv(labels_path)
